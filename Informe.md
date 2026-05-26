@@ -1,8 +1,3 @@
----
-marp: true
-paginate: true
----
-
 # Informe RF-001
 ## Integrantes:
 - Villegas Suarez, Elmer Jose Manuel
