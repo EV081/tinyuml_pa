@@ -21,6 +21,7 @@ package org.tinyuml.draw;
 
 import java.awt.geom.Rectangle2D;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * The base interface for Nodes that can contain other chidren. To allow for
@@ -30,6 +31,12 @@ import java.util.Collection;
  * @version 1.0
  */
 public interface CompositeNode extends Node, CompositeElement {
+
+  /**
+   * Returns the list of child elements contained in this node.
+   * @return the children
+   */
+  List<DiagramElement> getChildren();
 
   /**
    * Determines all the children that lie in the specified bounds and delegates

@@ -47,10 +47,16 @@ import javax.swing.JToolBar;
 import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.tinyuml.draw.Label;
+import org.tinyuml.draw.CompositeNode;
+import org.tinyuml.draw.Connection;
 import org.tinyuml.draw.DiagramElement;
 import org.tinyuml.draw.LabelChangeListener;
 import org.tinyuml.model.UmlModel;
 import org.tinyuml.util.AppCommandListener;
+import org.tinyuml.umldraw.shared.NoteElement;
+import org.tinyuml.umldraw.structure.ClassElement;
+import org.tinyuml.umldraw.structure.ComponentElement;
+import org.tinyuml.umldraw.structure.PackageElement;
 import org.tinyuml.umldraw.structure.StructureDiagram;
 import org.tinyuml.model.UmlModelImpl;
 import org.tinyuml.ui.commands.ModelReader;
@@ -79,6 +85,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
 
   private JTabbedPane tabbedPane;
   private JLabel coordLabel = new JLabel("    ");
+  private JLabel countLabel = new JLabel("Total Items:00");
   private JLabel memLabel = new JLabel("    ");
   private UmlModel umlModel;
   private DiagramEditor currentEditor;
@@ -213,6 +220,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
                               label.getText());
       }
     });
+    updateElementCount();
   }
 
   /**
@@ -241,8 +249,46 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   private void installStatusbar() {
     JPanel statusbar = new JPanel(new BorderLayout());
     statusbar.add(coordLabel, BorderLayout.WEST);
+    statusbar.add(countLabel, BorderLayout.CENTER);
     statusbar.add(memLabel, BorderLayout.EAST);
     getContentPane().add(statusbar, BorderLayout.SOUTH);
+  }
+
+  /**
+   * RF-001: Refreshes the status bar element counter for the current diagram.
+   * Counts nodes by category (Package, Class, Component, Note) and ignores
+   * connections (associations, dependencies, inheritance, note connections).
+   */
+  private void updateElementCount() {
+    int[] counts = new int[4]; // 0=Package, 1=Class, 2=Component, 3=Note
+    if (currentEditor != null && currentEditor.getDiagram() != null) {
+      countElements(currentEditor.getDiagram(), counts);
+    }
+    int total = counts[0] + counts[1] + counts[2] + counts[3];
+    StringBuilder sb = new StringBuilder();
+    sb.append(String.format("Total Items:%02d", total));
+    if (counts[0] > 0) sb.append(String.format("; Package:%02d", counts[0]));
+    if (counts[1] > 0) sb.append(String.format("; Class:%02d", counts[1]));
+    if (counts[2] > 0) sb.append(String.format("; Component:%02d", counts[2]));
+    if (counts[3] > 0) sb.append(String.format("; Note:%02d", counts[3]));
+    countLabel.setText(sb.toString());
+  }
+
+  /**
+   * Recursively counts diagram nodes by category. Walks composite nodes so
+   * elements nested inside packages are also counted.
+   */
+  private void countElements(CompositeNode parent, int[] counts) {
+    for (DiagramElement child : parent.getChildren()) {
+      if (child instanceof Connection) continue;
+      if (child instanceof PackageElement) counts[0]++;
+      else if (child instanceof ClassElement) counts[1]++;
+      else if (child instanceof ComponentElement) counts[2]++;
+      else if (child instanceof NoteElement) counts[3]++;
+      if (child instanceof CompositeNode) {
+        countElements((CompositeNode) child, counts);
+      }
+    }
   }
 
   /**
@@ -284,6 +330,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     // spring loading is implemented here
     staticToolbarManager.doClick("SELECT_MODE");
     updateMenuAndToolbars(editor);
+    updateElementCount();
   }
 
   /**
@@ -291,6 +338,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
    */
   public void elementRemoved(DiagramEditor editor) {
     updateMenuAndToolbars(editor);
+    updateElementCount();
   }
 
   /**
@@ -629,7 +677,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
 	  if(hasSelection)
 	    lastCopiedElements = getCurrentEditor().getSelectedElements();
 
-	  //adicionalmente, hay que habilitar el botón PASTE!
+	  //adicionalmente, hay que habilitar el botï¿½n PASTE!
 	  menumanager.enableMenuItem("PASTE", hasSelection);
 	  toolbarmanager.enableButton("PASTE", hasSelection);
   }
@@ -638,6 +686,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
    */
   public void paste(){
 		getCurrentEditor().pasteElement(lastCopiedElements);
+		updateElementCount();
   }
   /**
    * Deletes the current selection.
